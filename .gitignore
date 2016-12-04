@@ -1,0 +1,28 @@
+# object files
+*.d
+*.o
+*.pyc
+
+# emacs temp files
+*~
+
+# vi temp files
+*.swp
+
+# test output
+*.log
+*.txt
+
+# compiled libraries
+obj
+bin
+fftlda
+fftspec
+
+# datasets
+data
+
+# backup
+1
+backup
+
