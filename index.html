@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Sampling tensor decomp : Fast Approximate Orthogonal Tensor Decomposition Based on Importance Sampling">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Sampling tensor decomp</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/huanzhang12/sampling_tensor_decomp">View on GitHub</a>
+
+          <h1 id="project_title">Sampling tensor decomp</h1>
+          <h2 id="project_tagline">Fast Approximate Orthogonal Tensor Decomposition Based on Importance Sampling</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/huanzhang12/sampling_tensor_decomp/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/huanzhang12/sampling_tensor_decomp/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a id="sublinear-time-tensor-decomposition-with-importance-sampling" class="anchor" href="#sublinear-time-tensor-decomposition-with-importance-sampling" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Sublinear Time Tensor Decomposition with Importance Sampling</h1>
+
+<p>This repository contains experiment code for our paper, 
+"Sublinear Time Orthogonal Tensor Decomposition", by Zhao Song, David P. Woodruff and Huan Zhang.
+In our paper, we developed a sublinear algorithm for decomposing 
+large tensors using robust tensor power method, where the
+computationally expensive tensor contractions are done by importance
+sampling based on the magnitude of the power iterate variable.</p>
+
+<p>In our experiments we only implemented 3-rd order tensors, and 
+sampling with or without pre-scanning variants of our algorithm.
+Most parts of the code is based on [1], and we only add new importance
+sampling based tensor contraction functions.</p>
+
+<p><a href="https://vimeo.com/192582848">Spotlight Video for this paper</a>
+<a href="resources/poster.pdf">Poster for this paper</a></p>
+
+<h2>
+<a id="build" class="anchor" href="#build" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Build</h2>
+
+<p>We require the following environment to build the code:</p>
+
+<ul>
+<li>libfftw3 (provided by package <code>libfftw3-dev</code> on Debian based systems)</li>
+<li>Matlab 2014b or later</li>
+<li>GNU Compiler Collection (GCC) 4.9 or newer versions recommended</li>
+<li>Tested on Ubuntu 16.04, should be able to run other Linux distributions or OSX</li>
+</ul>
+
+<p>You need to modify <code>Makefile</code> to make sure Matlab includes and libraries 
+folders match your Matlab installation. They are defined as
+variable <code>MAT_INC</code> and <code>MAT_LIB</code>:</p>
+
+<pre><code>MAT_INC = /usr/local/MATLAB/R2014b/extern/include
+MAT_LIB = /usr/local/MATLAB/R2014b/bin/glnxa64
+
+</code></pre>
+
+<p>To build the program, simply run <code>make</code>. Two binaries, <code>fftspec</code>
+and <code>fft-lda</code> will be built. 
+We only need <code>fftspec</code> for experiments.</p>
+
+<h2>
+<a id="datasets" class="anchor" href="#datasets" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Datasets</h2>
+
+<p>Synthetic dense tensors with different eigengaps and noises can be generated via <code>fftspec</code>.
+The following command generates a rank-100, dimension 600*600*600 tensor, with sigma=0.01 noise added.
+Generated tensors will be stored under the folder "data".</p>
+
+<pre><code>./fftspec synth_lowrank 600 100 0.01 1
+</code></pre>
+
+<p>The last parameter <code>1</code> indicates that the 100 eigenvalues decay as $\lambda_i = 1/i$.
+If you set it to <code>2</code>, then $\lambda_i = 1/i^2$.
+If you set it to <code>3</code>,then $\lambda_i = 1 - (i-1)/k$, where k is the rank.</p>
+
+<p>For the tensors from LDA (Latent Dirichlet Allocation), we provide preprocessed tensors
+(lzma compressed) in folder <code>LDA_tensor_200</code> for all 6 datasets we used.</p>
+
+<h2>
+<a id="run-tensor-decomposition" class="anchor" href="#run-tensor-decomposition" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Run Tensor Decomposition</h2>
+
+<p>4 algorithms were provided for tensor decomposition:</p>
+
+<ul>
+<li>Naive robust tensor power method, computing exact tensor contractions</li>
+<li>Sketching based tensor power method, based on [1]</li>
+<li>Importance Sampling based tensor power method, without pre-scanning</li>
+<li>Importance Sampling based tensor power method, with pre-scanning</li>
+</ul>
+
+<p>Importance Sampling with pre-scanning provides best theoretical bound where
+only O(n^2) samples are needed, but it needs to scan the entire tensor first.
+In practice, the without pre-scanning version (assuming the tensor has bounded
+slice norms, see our paper for details) works better.</p>
+
+<p>In sketching or sampling based algorithms, the following parameters are 
+needed:</p>
+
+<ul>
+<li>T: Number of power iterations</li>
+<li>L: The number of starting vectors of the robust tensor power method</li>
+<li>B: The number of sketches used in sketching, or the number of repetitions of sampling </li>
+<li>b: The size of the sketch, or the number of indices sampled</li>
+</ul>
+
+<p>Note that there are small notation differences for the letter b between the code and paper:
+for the sketching based method, the actual sketch length used is 2^b; and for 
+importance sampling based method, the actual total number of samples is O(nb).</p>
+
+<p>The following command shows how to run tensor decomposition with <code>fftspec</code>:</p>
+
+<pre><code>./fftspec algorithm input rank L T B b output
+</code></pre>
+
+<p><code>rank</code> is the number of eigenpairs to be recoveried, 
+<code>algorithm</code> can be <code>slow_rbp</code>, <code>fast_rbp</code>, <code>fast_sample_rbp</code> and <code>prescan_sample_rbp</code>, which
+corresponds to the 4 algorithms metioned above, respectively.
+For naive tensor power method <code>slow_rbp</code>, parameter B and b are not needed.</p>
+
+<p>The following example shows how to generate a synthetic tensor, and run different methods
+to compare their running time and recovery accuracy:</p>
+
+<pre><code># generate a 800x800x800, rank-100 tensor (takes a while...)
+./fftspec synth_lowrank 800 100 0.01 2
+# Run sketching based tensor power method
+./fftspec fast_rbp data/tensor_dim_800_rank_100_noise_0.01_decaymethod_2.dat 1 50 30 30 16 output_dim_800_rank_100_noise_0.01_decaymethod_2_fastrbp_50_30_30_16_rank1.dat
+# Run sampling based tensor power method, without prescanning
+./fftspec fast_sample_rbp data/tensor_dim_800_rank_100_noise_0.01_decaymethod_2.dat 1 50 30 30 10 output_dim_800_rank_100_noise_0.01_decaymethod_2_samplerbp_50_30_30_10_rank1.dat
+# Run sampling based tensor power method, with prescanning
+./fftspec prescan_sample_rbp data/tensor_dim_800_rank_100_noise_0.01_decaymethod_2.dat 1 50 30 30 10 output_dim_800_rank_100_noise_0.01_decaymethod_2_presamplerbp_50_30_30_10_rank1.dat
+# Run naive tensor power method (SLOW!)
+./fftspec slow_rbp data/tensor_dim_800_rank_100_noise_0.01_decaymethod_2.dat 1 50 30 output_dim_800_rank_100_noise_0.01_decaymethod_2_slowrbp_50_30_rank1.dat
+# 
+</code></pre>
+
+<p>We want the residual norm to be small, while keeping the reported CPU time as
+short as possible.  Fixing T and L, you can try different B and b and see how
+running time and residual change.  Generally, using a smaller B and b makes the
+algorithm run faster, but the residual is likely to increase and divergence may
+occur when B or b is too small.  </p>
+
+<p>For the example above here is the expected
+outputs. If you got numbers quite different from these you probably hit a bug.</p>
+
+<ul>
+<li>For sketching based tensor power method:</li>
+</ul>
+
+<pre><code># [STAT]: prep_cpu_time=12.654545
+# [STAT]: prep_wall_time=12.654588
+# [STAT]: cpu_time=69.057999
+# [STAT]: wall_time=69.058114
+# [STAT]: residue=0.089962
+# [STAT]: fnorm=1.010029
+</code></pre>
+
+<ul>
+<li>For importance sampling based tensor power method (without pre-scanning, no preprocessing time):</li>
+</ul>
+
+<pre><code># [STAT]: cpu_time=9.078225
+# [STAT]: wall_time=9.078256
+# [STAT]: residue=0.086472
+# [STAT]: fnorm=1.010029
+
+</code></pre>
+
+<ul>
+<li>For importance sampling based tensor power method (with pre-scanning):</li>
+</ul>
+
+<pre><code># [STAT]: prep_cpu_time=0.659961
+# [STAT]: prep_wall_time=0.659971
+# [STAT]: cpu_time=10.123327
+# [STAT]: wall_time=10.123355
+# [STAT]: residue=0.086454
+# [STAT]: fnorm=1.010029
+
+</code></pre>
+
+<ul>
+<li>For naive tensor power method:</li>
+</ul>
+
+<pre><code>Too long, don't run!
+</code></pre>
+
+<h2>
+<a id="results" class="anchor" href="#results" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Results</h2>
+
+<p>We have included a large range of results in the <code>results</code> folder, for both sketching and importance sampling
+based parameters with different B and b, and different eigenvalue decay rates. </p>
+
+<h2>
+<a id="contact-information" class="anchor" href="#contact-information" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Contact information</h2>
+
+<p>If your have any questions or comments, please open an issue on Github,
+or send an email to <a href="mailto:ecezhang@ucdavis.edu">ecezhang@ucdavis.edu</a>. We appreciate your feedback.</p>
+
+<h2>
+<a id="references" class="anchor" href="#references" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>References</h2>
+
+<p>[1] Yining Wang, Hsiao-Yu Tung, Alex J Smola, and Anima Anandkumar. Fast and
+guaranteed tensor decomposition via sketching. In NIPS, pages 991-999, 2015.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Sampling tensor decomp maintained by <a href="https://github.com/huanzhang12">huanzhang12</a></p>
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
